@@ -5,99 +5,132 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-
 // Load background image
 const backgroundImage = new Image();
 backgroundImage.src = 'https://pictures.pibig.info/uploads/posts/2023-04/thumbs/1680963783_pictures-pibig-info-p-gora-ararat-risunok-vkontakte-7.jpg'; // Replace with your image path
 
-// Colors
-const skyColor = '#87CEEB'; // Light blue
-const grassColor = '#228B22'; // Green
-const sunColor = '#FFD700'; // Gold
-const ballColor = '#FF0000'; // Red
-
-// Dimensions
-const landHeight = canvas.height / 4;
-const grassHeight = 20; // Grass border height
-
 // Ball properties
 const ball = {
     x: 100,
-    y: canvas.height - landHeight - grassHeight - 30,
+    y: canvas.height - 130,
     radius: 20,
     speed: 5,
     dx: 0,
     dy: 0
 };
 
-// Score variable
+// Score and Timer variables
 let score = 0;
+let playerName = '';
+let timeLeft = 3600;
+let gameInterval;
 
-// Array to hold falling balls
+// Arrays to hold falling balls and black balls
 const fallingBalls = [];
+const blackBalls = [];
 
 // Falling ball properties
 const fallingBallRadius = 10;
 const fallingBallSpeed = 2;
 
-// Draw Sky
-function drawSky() {
-    ctx.fillStyle = skyColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height - landHeight);
-}
+// Black ball properties
+const blackBallRadius = 15;
+const blackBallSpeed = 4;
+
+// Modal elements
+const nameModal = document.getElementById('nameModal');
+const scoreModal = document.getElementById('scoreModal');
+const finalScoreText = document.getElementById('finalScore');
+const startGameButton = document.getElementById('startGame');
+const playAgainButton = document.getElementById('playAgain');
 
 // Draw Background Image
 function drawBackground() {
     ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
 }
 
-// Draw Land
-function drawLand() {
-    ctx.fillStyle = '#8B4513'; // Brown soil color
-    ctx.fillRect(0, canvas.height - landHeight, canvas.width, landHeight);
-
-    // Draw grass border on top of the land
-    ctx.fillStyle = grassColor;
-    ctx.fillRect(0, canvas.height - landHeight - grassHeight, canvas.width, grassHeight);
-}
-
-// Draw Sun
-function drawSun() {
-    const sunX = canvas.width - 100;
-    const sunY = 100;
-    const sunRadius = 50;
-
-    ctx.beginPath();
-    ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2, false);
-    ctx.fillStyle = sunColor;
-    ctx.fill();
-    ctx.closePath();
-}
-
-// Draw Clouds
-function drawCloud(x, y, size) {
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2, false);
-    ctx.arc(x + size, y + size / 2, size, 0, Math.PI * 2, false);
-    ctx.arc(x + size * 2, y, size, 0, Math.PI * 2, false);
-    ctx.fillStyle = '#FFFFFF'; // White color
-    ctx.fill();
-    ctx.closePath();
-}
-
-function drawClouds() {
-    drawCloud(150, 100, 30);
-    drawCloud(400, 150, 40);
-    drawCloud(650, 80, 35);
-}
-
 // Draw Ball
 function drawBall() {
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2, false);
-    ctx.fillStyle = ballColor;
+    ctx.fillStyle = '#FF0000'; // Red color
     ctx.fill();
     ctx.closePath();
+}
+
+// Draw Score
+function drawScore() {
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#000';
+    ctx.fillText('Score: ' + score, 20, 30);
+}
+
+// Draw Timer
+function drawTimer() {
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#000';
+    ctx.fillText('Time Left: ' + timeLeft, canvas.width - 150, 30);
+}
+
+// Create a Falling Ball
+function createFallingBall() {
+    const x = Math.random() * (canvas.width - fallingBallRadius * 2) + fallingBallRadius;
+    fallingBalls.push({ x: x, y: -fallingBallRadius });
+}
+
+// Draw Falling Balls
+function drawFallingBalls() {
+    fallingBalls.forEach((fallingBall, index) => {
+        ctx.beginPath();
+        ctx.arc(fallingBall.x, fallingBall.y, fallingBallRadius, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#FF4500'; // Orange-red color for the small balls
+        ctx.fill();
+        ctx.closePath();
+
+        // Move the falling balls down
+        fallingBall.y += fallingBallSpeed;
+
+        // Check for collision with the main red ball
+        if (checkCollision(fallingBall, fallingBallRadius)) {
+            fallingBalls.splice(index, 1); // Remove the ball from the array
+            score++; // Increment the score
+        }
+    });
+}
+
+// Create a Black Ball
+function createBlackBall() {
+    const x = Math.random() * (canvas.width - blackBallRadius * 2) + blackBallRadius;
+    blackBalls.push({ x: x, y: -blackBallRadius });
+}
+
+// Draw Black Balls
+function drawBlackBalls() {
+    blackBalls.forEach((blackBall, index) => {
+        ctx.beginPath();
+        ctx.arc(blackBall.x, blackBall.y, blackBallRadius, 0, Math.PI * 2, false);
+        ctx.fillStyle = '#000000'; // Black color for the balls
+        ctx.fill();
+        ctx.closePath();
+
+        // Move the black balls down
+        blackBall.y += blackBallSpeed;
+
+        // Check for collision with the main red ball
+        if (checkCollision(blackBall, blackBallRadius)) {
+            blackBalls.splice(index, 1); // Remove the ball from the array
+            score = 0; // Reset the score to 0
+        }
+    });
+}
+
+// Check Collision between the red ball and a falling ball
+function checkCollision(ballObj, radius) {
+    const distX = ball.x - ballObj.x;
+    const distY = ball.y - ballObj.y;
+    const distance = Math.sqrt(distX * distX + distY * distY);
+
+    return distance < ball.radius + radius;
 }
 
 // Move Ball
@@ -115,9 +148,73 @@ function moveBall() {
     if (ball.y - ball.radius < 0) {
         ball.y = ball.radius;
     }
-    if (ball.y + ball.radius > canvas.height - landHeight - grassHeight) {
-        ball.y = canvas.height - landHeight - grassHeight - ball.radius;
+    if (ball.y + ball.radius > canvas.height) {
+        ball.y = canvas.height - ball.radius;
     }
+}
+
+// Draw the entire scene
+function drawScene() {
+    drawBackground(); // Draw the background image
+    drawBall();
+    drawScore();
+    drawTimer();
+    drawFallingBalls();
+    drawBlackBalls();
+}
+
+// Update Game Frame
+function update() {
+    moveBall();
+    drawScene();
+
+    // Randomly create falling balls
+    if (Math.random() < 0.03) {
+        createFallingBall();
+    }
+
+    // Randomly create black balls
+    if (Math.random() < 0.02) {
+        createBlackBall();
+    }
+}
+
+// Timer countdown
+function countdown() {
+    if (timeLeft > 0) {
+        timeLeft--;
+    } else {
+        endGame();
+    }
+}
+
+// Start the game
+function startGame() {
+    playerName = document.getElementById('playerName').value || 'Player';
+    nameModal.style.display = 'none';
+
+    // Start the game loop and timer
+    gameInterval = setInterval(() => {
+        update();
+        countdown();
+    }, 1000/60); // 60 FPS
+}
+
+// End the game and show the score
+function endGame() {
+    clearInterval(gameInterval);
+    scoreModal.style.display = 'block';
+    finalScoreText.innerText = `${playerName}, your score is: ${score}`;
+}
+
+// Restart the game
+function restartGame() {
+    score = 0;
+    timeLeft = 3600;
+    fallingBalls.length = 0;
+    blackBalls.length = 0;
+    nameModal.style.display = 'block';
+    scoreModal.style.display = 'none';
 }
 
 // Handle Key Down
@@ -152,116 +249,13 @@ function keyUp(e) {
     }
 }
 
-// Draw Score
-function drawScore() {
-    ctx.font = '20px Arial';
-    ctx.fillStyle = '#000';
-    ctx.fillText('Score: ' + score, 20, 30);
-}
-
-// Create a Falling Ball
-function createFallingBall() {
-    const x = Math.random() * (canvas.width - fallingBallRadius * 2) + fallingBallRadius;
-    fallingBalls.push({ x: x, y: -fallingBallRadius });
-}
-
-// Draw Falling Balls
-function drawFallingBalls() {
-    fallingBalls.forEach((fallingBall, index) => {
-        ctx.beginPath();
-        ctx.arc(fallingBall.x, fallingBall.y, fallingBallRadius, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#FF4500'; // Orange-red color for the small balls
-        ctx.fill();
-        ctx.closePath();
-
-        // Move the falling balls down
-        fallingBall.y += fallingBallSpeed;
-
-        // Check for collision with the main red ball
-        if (checkCollision(fallingBall, fallingBallRadius)) {
-            fallingBalls.splice(index, 1); // Remove the ball from the array
-            score++; // Increment the score
-        }
-    });
-}
-
-// Check Collision between the red ball and a falling ball
-function checkCollision(fallingBall, fallingBallRadius) {
-    const distX = ball.x - fallingBall.x;
-    const distY = ball.y - fallingBall.y;
-    const distance = Math.sqrt(distX * distX + distY * distY);
-
-    return distance < ball.radius + fallingBallRadius;
-}
-
-
-// Array to hold black balls
-const blackBalls = [];
-
-// Black ball properties
-const blackBallRadius = 15;
-const blackBallSpeed = 4;
-
-// Create a Black Ball
-function createBlackBall() {
-    const x = Math.random() * (canvas.width - blackBallRadius * 2) + blackBallRadius;
-    blackBalls.push({ x: x, y: -blackBallRadius });
-}
-
-// Draw Black Balls
-function drawBlackBalls() {
-    blackBalls.forEach((blackBall, index) => {
-        ctx.beginPath();
-        ctx.arc(blackBall.x, blackBall.y, blackBallRadius, 0, Math.PI * 2, false);
-        ctx.fillStyle = '#000000'; // Black color for the balls
-        ctx.fill();
-        ctx.closePath();
-
-        // Move the black balls down
-        blackBall.y += blackBallSpeed;
-
-        // Check for collision with the main red ball
-        if (checkCollision(blackBall, blackBallRadius)) {
-            blackBalls.splice(index, 1); // Remove the ball from the array
-            score = 0; // Reset the score to 0
-        }
-    });
-}
-
-
-// Draw the entire scene
-function drawScene() {
-    drawSky();
-    drawBackground()
-    drawSun();
-    drawClouds();
-    drawLand();
-    drawBall();
-}
-
-// Update Game Frame
-function update() {
-    moveBall();
-    drawScene();
-    drawScore();
-    drawFallingBalls();
-    drawBlackBalls();
-
-    // Randomly create falling balls
-    if (Math.random() < 0.03) { // Adjust probability to control frequency
-        createFallingBall();
-    }
-    
-    if (Math.random() < 0.02) { // Adjust probability to control frequency
-        createBlackBall();
-    }
-
-    requestAnimationFrame(update);
-}
-
 // Event listeners
 document.addEventListener('keydown', keyDown);
 document.addEventListener('keyup', keyUp);
+startGameButton.addEventListener('click', startGame);
+playAgainButton.addEventListener('click', restartGame);
 
-// Start the game
-update();
+// Show the name modal on page load
+window.onload = () => {
+    nameModal.style.display = 'block';
+};
