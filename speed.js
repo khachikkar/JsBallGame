@@ -133,6 +133,18 @@ function checkCollision(ballObj, radius) {
     return distance < ball.radius + radius;
 }
 
+function drawInstructions() {
+    // Set font and other text properties
+ctx.font = '16px Arial'; // Adjust font size and family as needed
+ctx.fillStyle = 'white'; // Adjust text color as needed
+
+// Draw the text with arrow symbols
+ctx.fillText('↑ - Move Up', 20, canvas.height - 30);
+ctx.fillText('↓ - Move Down', 20, canvas.height - 10);
+ctx.fillText('← - Move Left', 20, canvas.height - 50);
+ctx.fillText('→ - Move Right', 20, canvas.height - 70);
+}
+
 // Move Ball
 function moveBall() {
     ball.x += ball.dx;
@@ -159,6 +171,7 @@ function drawScene() {
     drawBall();
     drawScore();
     drawTimer();
+    drawInstructions()
     drawFallingBalls();
     drawBlackBalls();
 }
